@@ -37,13 +37,10 @@ class CustomConv2dOp : public OpKernel {
                 
                 conv_res[i][j] = partial_conv;
             }
-        // Set all but the first element of the output tensor to 0.
         for (int i = 0; i <(IMG_H-FIL_H+1) * (IMG_W-FIL_W+1) ; i++) {
             output_flat(i) = conv_res[i/IMG_H-FIL_H+1][i%IMG_W-FIL_W+1];
         }
 
-        // // Preserve the first input value if possible.
-        // if (N > 0) output_flat(0) = 1;
     }
 };
 
