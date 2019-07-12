@@ -13,23 +13,30 @@ class CustomConv2dOp : public OpKernel {
 
     void Compute(OpKernelContext* context) override {
     // Grab the input tensor
-        const Tensor& input_tensor = context->input(0);
-        auto input = input_tensor.flat<float>();
+        const Tensor& input_tensor1 = context->input(0);
+        const Tensor& input_tensor2 = context->input(1);
+        
+        tensorflow::TensorShape ts(input_tensor1.shape());
+        int width = (input_tensor1.shape().dim_size(1)-input_tensor2.shape().dim_size(1)+1);
+        int height = (input_tensor1.shape().dim_size(0)-input_tensor2.shape().dim_size(0)+1);
+        ts.set_dim(0, height);
+        ts.set_dim(1, width);
+
+        auto input = input_tensor1.flat<float>();
         float partial_conv;
-        float conv_res[IMG_H-FIL_H+1][IMG_W-FIL_W+1];
+        float conv_res[height][width];
         int filter[FIL_H][FIL_W] = {{1, 0}, {1, -1}};
         float img[IMG_H][IMG_W] = {{1, 0}, {1, -1}};
 
         // Create an output tensor
         Tensor* output_tensor = NULL;
-        OP_REQUIRES_OK(context, context->allocate_output(0, input_tensor.shape(),
-                                                        &output_tensor));
+        OP_REQUIRES_OK(context, context->allocate_output(0, ts,&output_tensor));
         auto output_flat = output_tensor->flat<float>();
-
+        
         // convolution body
         
-        for (int i = 0; i < IMG_H-FIL_H+1; i++)
-            for (int j = 0; j < IMG_W-FIL_W+1; j++){
+        for (int i = 0; i < height; i++)
+            for (int j = 0; j < width; j++){
                 partial_conv = 0;
                 for (int k = 0; k < FIL_H; k++)
                     for (int l = 0; l < FIL_W; l++)
@@ -37,8 +44,8 @@ class CustomConv2dOp : public OpKernel {
                 
                 conv_res[i][j] = partial_conv;
             }
-        for (int i = 0; i <(IMG_H-FIL_H+1) * (IMG_W-FIL_W+1) ; i++) {
-            output_flat(i) = conv_res[i/IMG_H-FIL_H+1][i%IMG_W-FIL_W+1];
+        for (int i = 0; i <(height) * (width) ; i++) {
+            output_flat(i) = conv_res[i/(height)][i%(width)];
         }
 
     }
