@@ -7,31 +7,31 @@ class CustomConv2dOp : public OpKernel {
     explicit CustomConv2dOp(OpKernelConstruction* context) : OpKernel(context) {}
 
     void Compute(OpKernelContext* context) override {
-    // Grab the input tensor
-        const Tensor& intens = context->input(0);
+
         const Tensor& input_tensor1 = context->input(0);
         const Tensor& input_tensor2 = context->input(1);
+
+        const Tensor& input_tensor3 = context->input(2);
+        auto strides = input_tensor3.flat<float>();
         
-        tensorflow::TensorShape ts(input_tensor1.shape());
         int FIL_H = input_tensor2.shape().dim_size(0);
         int FIL_W =input_tensor2.shape().dim_size(1);
         int IMG_H = input_tensor1.shape().dim_size(3);
         int IMG_W = input_tensor1.shape().dim_size(2);
 
-        int width = (input_tensor1.shape().dim_size(2)-input_tensor2.shape().dim_size(1)+1);
-        int height = (input_tensor1.shape().dim_size(1)-input_tensor2.shape().dim_size(0)+1);
-        
+        int width = ((input_tensor1.shape().dim_size(2)-input_tensor2.shape().dim_size(1))/strides(1)+1);
+        int height = ((input_tensor1.shape().dim_size(1)-input_tensor2.shape().dim_size(0))/strides(0)+1);
+
+        tensorflow::TensorShape ts(input_tensor1.shape());
         ts.set_dim(0, 1);
         ts.set_dim(1, width);
         ts.set_dim(2, height);
         ts.set_dim(3, 1);
 
-        auto input = input_tensor1.flat<float>();
-        auto in1 = input_tensor2.flat<float>();
+        auto img = input_tensor1.flat<float>();
+        auto filter = input_tensor2.flat<float>();
         float partial_conv;
         float conv_res[height][width];
-        int filter[2][2] = {{1, 0}, {1, -1}};
-        float img[2][2] = {{1, 0}, {1, -1}};
 
         // Create an output tensor
         Tensor* output_tensor = NULL;
@@ -39,19 +39,17 @@ class CustomConv2dOp : public OpKernel {
         auto output_flat = output_tensor->flat<float>();
         
         // convolution body
-    
         for (int i = 0; i < height; i++)
             for (int j = 0; j < width; j++){
                 partial_conv = 0;
-                for (int k = 0; k < FIL_H; k++)
-                    for (int l = 0; l < FIL_W; l++)
-                        partial_conv += in1(k*FIL_W+l) * input((i+k)*IMG_W+l+j);
+                for (int k = 0; k < FIL_H; k+=1)
+                    for (int l = 0; l < FIL_W; l+=1)
+                        partial_conv += filter(k*FIL_W+l) * img((i*strides(0)+k)*IMG_W+l+j*strides(1));
                 
                 conv_res[i][j] = partial_conv;
             }
         for (int i = 0; i <(height) * (width) ; i++)
             output_flat(i) = conv_res[i/(width)][i%(width)];
-        printf("height = %d , width = %d", height, width);
 
     }
 };

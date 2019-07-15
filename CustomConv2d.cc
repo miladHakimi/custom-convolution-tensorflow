@@ -8,10 +8,11 @@
 using namespace tensorflow;
 
 REGISTER_OP("CustomConv2d")
-    // .Attr("strides: list(int) = []")
-    // .Attr("padding: string")
     .Input("input: float32")
     .Input("filter: float32")
+    .Input("strides: float32")
+    // .Attr("strideAttr: float32 = [1, 1]")
+    // .Attr("l_empty: list({float, int32}) = []")
     .Output("conved: float32")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
       c->set_output(0, c->input(0));
