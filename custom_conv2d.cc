@@ -8,20 +8,23 @@ class CustomConv2dOp : public OpKernel {
 
     void Compute(OpKernelContext* context) override {
     // Grab the input tensor
+        const Tensor& intens = context->input(0);
         const Tensor& input_tensor1 = context->input(0);
         const Tensor& input_tensor2 = context->input(1);
         
         tensorflow::TensorShape ts(input_tensor1.shape());
         int FIL_H = input_tensor2.shape().dim_size(0);
         int FIL_W =input_tensor2.shape().dim_size(1);
-        int IMG_H = input_tensor1.shape().dim_size(0);
-        int IMG_W = input_tensor1.shape().dim_size(1);
+        int IMG_H = input_tensor1.shape().dim_size(3);
+        int IMG_W = input_tensor1.shape().dim_size(2);
 
-        int width = (input_tensor1.shape().dim_size(1)-input_tensor2.shape().dim_size(1)+1);
-        int height = (input_tensor1.shape().dim_size(0)-input_tensor2.shape().dim_size(0)+1);
+        int width = (input_tensor1.shape().dim_size(2)-input_tensor2.shape().dim_size(1)+1);
+        int height = (input_tensor1.shape().dim_size(1)-input_tensor2.shape().dim_size(0)+1);
         
-        ts.set_dim(0, height);
+        ts.set_dim(0, 1);
         ts.set_dim(1, width);
+        ts.set_dim(2, height);
+        ts.set_dim(3, 1);
 
         auto input = input_tensor1.flat<float>();
         auto in1 = input_tensor2.flat<float>();
@@ -48,6 +51,7 @@ class CustomConv2dOp : public OpKernel {
             }
         for (int i = 0; i <(height) * (width) ; i++)
             output_flat(i) = conv_res[i/(width)][i%(width)];
+        printf("height = %d , width = %d", height, width);
 
     }
 };
