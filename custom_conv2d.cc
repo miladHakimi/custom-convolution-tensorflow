@@ -19,8 +19,8 @@ class CustomConv2dOp : public OpKernel {
         int IMG_H = input_tensor1.shape().dim_size(3);
         int IMG_W = input_tensor1.shape().dim_size(2);
 
-        int width = ((input_tensor1.shape().dim_size(2)-input_tensor2.shape().dim_size(1))/strides(1)+1);
-        int height = ((input_tensor1.shape().dim_size(1)-input_tensor2.shape().dim_size(0))/strides(0)+1);
+        int width = ceil((input_tensor1.shape().dim_size(2)-input_tensor2.shape().dim_size(1)+1)/strides(1));
+        int height = ceil((input_tensor1.shape().dim_size(1)-input_tensor2.shape().dim_size(0)+1)/strides(0));
 
         tensorflow::TensorShape ts(input_tensor1.shape());
         ts.set_dim(0, 1);
