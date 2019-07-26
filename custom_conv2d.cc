@@ -21,7 +21,7 @@ class CustomConv2dOp : public OpKernel {
         int IMG_H = input_tensor1.shape().dim_size(1);
         int IMG_W = input_tensor1.shape().dim_size(2);
 
-        int width , height, count;
+        int width , height, count, depth;
 
         if(padding(0) == "SAME"){
             width = ceil(IMG_W/strides(1));
@@ -32,11 +32,12 @@ class CustomConv2dOp : public OpKernel {
             height = ceil((input_tensor1.shape().dim_size(1)-input_tensor2.shape().dim_size(0)+1)/strides(0));
         }
         count = input_tensor1.shape().dim_size(0);
+        depth = input_tensor2.shape().dim_size(3);
         tensorflow::TensorShape ts(input_tensor1.shape());
         ts.set_dim(0, count);
         ts.set_dim(1, height);
         ts.set_dim(2, width);
-        ts.set_dim(3, 1);
+        ts.set_dim(3, depth);
 
         auto img = input_tensor1.flat<float>();
         auto filter = input_tensor2.flat<float>();
@@ -49,19 +50,21 @@ class CustomConv2dOp : public OpKernel {
         auto output_flat = output_tensor->flat<float>();
         // convolution body
         for (int m = 0; m < count; m++){
-            for (int i = 0; i < height; i+=1){
-                for (int j = 0; j < width; j+=1){
-                    partial_conv = 0;
-                    for (int k = 0; k < FIL_H; k+=1)
-                        if(i*strides(0)+k < IMG_H)
-                            for (int l = 0; l < FIL_W; l+=1)
-                                if(j*strides(0)+l < IMG_W)
-                                    partial_conv += filter(k*FIL_W+l) * img(m*(IMG_H*IMG_W)+ (i*strides(0)+k)*IMG_W+l+j*strides(1));
-                                else
-                                    break;           
-                        else
-                            break;                                 
-                    output_flat(m*height*width+i*width+j) = partial_conv;
+            for (int n = 0; n < depth; n++){
+                for (int i = 0; i < height; i+=1){
+                    for (int j = 0; j < width; j+=1){
+                        partial_conv = 0;
+                        for (int k = 0; k < FIL_H; k+=1)
+                            if(i*strides(0)+k < IMG_H)
+                                for (int l = 0; l < FIL_W; l+=1)
+                                    if(j*strides(0)+l < IMG_W)
+                                        partial_conv += filter(n*FIL_H*FIL_W+k*FIL_W+l) * img(m*(IMG_H*IMG_W)+ (i*strides(0)+k)*IMG_W+l+j*strides(1));
+                                    else
+                                        break;           
+                            else
+                                break;                                 
+                        output_flat(m*height*width*depth+n*height*width+i*width+j) = partial_conv;
+                    }
                 }
             }
         }
