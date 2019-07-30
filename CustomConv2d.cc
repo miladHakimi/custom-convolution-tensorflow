@@ -10,7 +10,7 @@ using namespace tensorflow;
 REGISTER_OP("CustomConv2d")
     .Input("input: float32")
     .Input("filter: float32")
-    .Input("strides: float32")
+    .Input("strides: int32")
     .Input("padding: string")
     .Output("conved: float32")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
