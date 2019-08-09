@@ -1,5 +1,6 @@
 #include "tensorflow/core/framework/op_kernel.h"
 #include <string.h>
+#include <cmath>
 
 using namespace tensorflow;
 
@@ -49,7 +50,9 @@ class CustomConv2dOp : public OpKernel {
         auto img = input_tensor1.flat<float>();
         auto filter = input_tensor2.flat<float>();
         long double partial_conv;
-
+        int filter_op, img_op;
+        int p_conv;
+        int shift_amount = 6 - 1;
         // Create an output tensor
         Tensor* output_tensor = NULL;
         OP_REQUIRES_OK(context, context->allocate_output(0, ts,&output_tensor));
@@ -57,25 +60,29 @@ class CustomConv2dOp : public OpKernel {
         // convolution body
         int comp_img_height = 0;
         int comp_img_width = 0;
+        filter_op = (int)(filter(500)* pow(2, shift_amount));
         for (int m = 0; m < count; m++){
             for (int n = 0; n < depth; n++){
                 for (int i = 0; i < height; i+=1){
                     for (int j = 0; j < width; j+=1){
                         partial_conv = 0;
+                        p_conv = 0;
                         for (int k = 0; k < FIL_H; k+=1){
                             comp_img_height = i * strides(0) + k - pad_top;
                             if(comp_img_height >= 0 && comp_img_height < IMG_H + pad_bottom)
                                 for (int l = 0; l < FIL_W; l+=1){
                                     comp_img_width = j * strides(0) + l - pad_left;
+                                    filter_op = (int)(filter((k * FIL_W + l) * depth + n)* pow(2, shift_amount) + 0.5);
+                                    img_op =  (int)(img( m * (IMG_H*IMG_W) + comp_img_height * IMG_W + comp_img_width)* pow(2, shift_amount) + 0.5);
                                     if(comp_img_width >= 0 && comp_img_width < IMG_W + pad_right)
-                                        partial_conv += (long double)filter((k * FIL_W + l) * depth + n) * (long double)img( m * (IMG_H*IMG_W) + comp_img_height * IMG_W + comp_img_width);
+                                        p_conv += (filter_op * img_op)>>shift_amount;
                                     else
                                         break;       
                                 }    
                             else
                                 break;  
                         }
-                        output_flat(m*height*width*depth+(i*width+j)*depth+n) = partial_conv;
+                        output_flat(m*height*width*depth+(i*width+j)*depth+n) = p_conv/((pow(2,shift_amount))*1.0);
                     }
                 }
             }
